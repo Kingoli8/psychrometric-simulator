@@ -1,0 +1,36 @@
+# Materials database with thermal conductivity (k) in W/(m.K), density (rho) in kg/m^3, and specific heat capacity (cp) in J/(kg.K).
+Brick:
+  k: 1.1
+  rho: 1800
+  cp: 840
+  color: '#B22222'  # Firebrick red
+Air:
+  k: 0.176
+  rho: 1.2
+  cp: 1000
+  color: '#87CEEB'  # Sky blue
+Insulation:
+  k: 0.026
+  rho: 35
+  cp: 830
+  color: '#F5DD7A'  # Yellow
+Concrete:
+  k: 0.9
+  rho: 1200
+  cp: 1000
+  color: '#A9A9A9'  # Dark gray
+Plaster:
+  k: 0.52
+  rho: 1300
+  cp: 840
+  color: '#f6f0f7'  # White
+Wood:
+  k: 0.14
+  rho: 500
+  cp: 2500
+  color: '#DEB887'  # Burlywood
+PIR: # Kingspan Quadcore insulation panel
+  k: 0.018
+  rho: 92.67
+  cp: 1400
+  color: '#FFD700'  # Gold

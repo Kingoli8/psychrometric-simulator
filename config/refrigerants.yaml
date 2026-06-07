@@ -1,0 +1,71 @@
+# Modular Refrigerant Database
+# Defines Name, Formula, ATEX Safety Class, PED Fluid Group, Lower Flammability Limit (LFL) in kg/m^3, ATEL/ODL (Acute Toxicity Exposure Limit/ Oxygen Deprivation Limit) value in kg/m^3, Practical Limit in kg/m^3, Auto-ignition Temperature in °C and vapour density in kg/m^3 based on EN 378-1:2016+A1:2020 Annex E or ISO 817:2025
+R290:
+  chemical_name: Propane
+  formula: C3H8
+  safety_class: A3
+  fluid_group: 1
+  lfl: 0.038
+  atel_odl: 0.09
+  practical_limit: 0.008
+  auto_ignition_temp: 470
+  density: 1.80
+R600:
+  chemical_name: Butane
+  formula: C4H10
+  safety_class: A3
+  fluid_group: 1
+  lfl: 0.038
+  atel_odl: 0.0024
+  practical_limit: 0.0089 # "Grandfathered" value
+  auto_ignition_temp: 365
+  density: 2.38
+R601:
+  chemical_name: Pentane
+  formula: C5H12
+  safety_class: A3
+  fluid_group: 1
+  lfl: 0.035
+  atel_odl: 0.0029
+  practical_limit: 0.008 # "Grandfathered" value
+  auto_ignition_temp: null # Not available in EN 378-1 Annex E
+  density: null # Not available in EN 378-1 Annex E
+R601a:
+  chemical_name: Isopentane
+  formula: C5H12
+  safety_class: A3
+  fluid_group: 1
+  lfl: 0.038
+  atel_odl: 0.0029
+  practical_limit: 0.008 # "Grandfathered" value
+  auto_ignition_temp: null # Not available in EN 378-1 Annex E
+  density: null # Not available in EN 378-1 Annex E
+R717:
+  chemical_name: Ammonia
+  formula: NH3
+  safety_class: B2L
+  fluid_group: 1
+  lfl: 0.116
+  atel_odl: 0.00022
+  practical_limit: 0.00035 # "Grandfathered" value
+  auto_ignition_temp: 630
+  density: 0.70
+R744:
+  chemical_name: Carbon Dioxide
+  formula: CO2
+  safety_class: A1
+  fluid_group: 2
+  lfl: 0 # Not flammable
+  atel_odl: 0.072
+  practical_limit: 0.1 # "Grandfathered" value
+  auto_ignition_temp: null # Not available in EN 378-1 Annex E
+  density: 1.80
+R702: # From ISO 817, not included in EN 378-1
+  chemical_name: Hydrogen
+  formula: H2
+  safety_class: A3
+  fluid_group: 1
+  lfl: 0.003
+  atel_odl: 0.011
+  practical_limit: null # Not available in EN 378-1 Annex E
+  auto_ignition_temp: null # Not available in ISO 817
