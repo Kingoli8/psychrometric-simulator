@@ -70,7 +70,7 @@ st.title("Psychrometric Chamber Simulator")
 chamber_mode = st.segmented_control(
     "Chamber Configuration", 
     options=["Mono-Chamber", "Twin-Chamber"],
-    default="Mono-Chamber", 
+    default="Twin-Chamber", 
     selection_mode="single", 
     required=True,
     label_visibility="collapsed"    
@@ -112,13 +112,13 @@ with st.expander("**Simulation Parameters**", expanded=False):
             st.markdown("**Zone 1 (Indoor) Setpoints**")
             ttcol1, ttcol2, ttcol_f1 = st.columns(3, border=True)
             ttcol1.number_input("Target Temp (°C)", value=20.0, step=1.0, key=f"t_target_{z1}")
-            ttcol2.number_input("Appliances (W)", value=0.0, step=100.0, key=f"q_app_{z1}")
+            ttcol2.number_input("Appliances (W)", value=200.0, step=100.0, key=f"q_app_{z1}")
             ttcol_f1.number_input("Fan SFP", value=1.5, step=0.1, key=f"fan_sfp_{z1}")
         with tcol2:
             st.markdown("**Zone 2 (Outdoor) Setpoints**")
             ttcol3, ttcol4, ttcol_f2 = st.columns(3, border=True)
-            ttcol3.number_input("Target Temp (°C)", value=-20.0, step=1.0, key=f"t_target_{z2}")
-            ttcol4.number_input("Appliances (W)", value=0.0, step=100.0, key=f"q_app_{z2}")
+            ttcol3.number_input("Target Temp (°C)", value=0.0, step=1.0, key=f"t_target_{z2}")
+            ttcol4.number_input("Appliances (W)", value=200.0, step=100.0, key=f"q_app_{z2}")
             ttcol_f2.number_input("Fan SFP", value=1.5, step=0.1, key=f"fan_sfp_{z2}")
         
         tbcol1, tbcol2 = st.columns(2, border=True)

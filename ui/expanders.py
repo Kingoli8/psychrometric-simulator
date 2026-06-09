@@ -34,7 +34,7 @@ def render_walls_for_zone(full_materials_db, zone_name, default_wall_df):
 
         scol1, scol2 = st.columns(2, vertical_alignment="bottom")
         with scol1:
-            st.number_input("Wall Area (m²)", min_value=0.01, value=10.0, step=1.0, key=f"area_{zone_name}_{uid}")
+            st.number_input("Wall Area (m²)", min_value=0.01, value=64.0, step=1.0, key=f"area_{zone_name}_{uid}")
         with scol2:
             if zone_name == "Shared Boundary":
                 st.info("Boundary is strictly the adjacent zone (Zone 1 ↔ Zone 2)")
@@ -82,7 +82,7 @@ def render_walls_for_zone(full_materials_db, zone_name, default_wall_df):
         plot_df['Color'] = plot_df['Material'].apply(lambda x: full_materials_db[x].get('color', "#F505A1"))
         draw_wall_layers(plot_df, unique_key=f"plot_{zone_name}_{uid}")
         
-        current_area = st.session_state.get(f"area_{zone_name}_{uid}", 10.0)
+        current_area = st.session_state.get(f"area_{zone_name}_{uid}", 50.0)
         current_bound = st.session_state.get(f"bound_{zone_name}_{uid}", "Building Interior")
         
         U_wall = init_RC_network(clean_df, chamber_position=current_bound)[2]
@@ -202,7 +202,7 @@ def render_testbench_profile(zone_name, time_array_hours, time_steps, mode):
         q_tb_mode = st.segmented_control("Testbench Profile Type", ["Constant", "Step Cycle (On/Off)", "File Upload"], default="Constant", key=f"q_tb_mode_{zone_name}")
         
         if q_tb_mode == "Constant":
-            q_tb_val = st.number_input("Constant Load (W)", value=2000.0, step=100.0, key=f"q_c_{zone_name}")
+            q_tb_val = st.number_input("Constant Load (W)", value=10000.0, step=1000.0, key=f"q_c_{zone_name}")
             Q_tb_array = np.ones(time_steps)*q_tb_val
         elif q_tb_mode == "Step Cycle (On/Off)":
             s_col1, s_col2, s_col3 = st.columns(3)
@@ -239,18 +239,17 @@ def render_safety_assessment(zone_name):
     col1, col2 = st.columns(2, border=True)
     with col1:
         vcol1, vcol2 = st.columns([0.7, 0.3], vertical_alignment="bottom")
-        vcol1.number_input("Chamber Volume", min_value=0.1, value=15.0, step=1.0, key=f"s_vol_{zone_name}")
+        vcol1.number_input("Chamber Volume", min_value=0.1, value=64.0, step=1.0, key=f"s_vol_{zone_name}")
         vcol2.selectbox("Unit", ["m³", "L"], index=0, key=f"s_vunit_{zone_name}", label_visibility="collapsed")
-        st.number_input("Refrigerant Charge (kg)", min_value=0.0, value=1.5, step=0.1, key=f"s_charge_{zone_name}")
+        st.number_input("Refrigerant Charge (kg)", min_value=0.0, value=2.0, step=0.1, key=f"s_charge_{zone_name}")
         
     with col2:
-        st.selectbox("Location Class", ["Class I", "Class II", "Class III", "Class IV"], index=1, key=f"s_loc_{zone_name}")
+        st.selectbox("Location Class", ["Class I", "Class II", "Class III", "Class IV"], index=2, key=f"s_loc_{zone_name}")
         st.selectbox("Access Category", ["Category a", "Category b", "Category c"], index=2, key=f"s_acc_{zone_name}")
         
     bcol1, bcol2 = st.columns(2)
     bcol1.checkbox("Upper floors or below ground", value=False, key=f"s_upbel_{zone_name}", help="No emergency exits available.")
     bcol2.checkbox("Personnel Density < 1 person/10m²", value=True, key=f"s_pers_{zone_name}")
-    st.write("")
 
 
 # ==========================================
@@ -278,7 +277,7 @@ def execute_thermal_simulation(chamber_mode, full_refrigerants_db):
         
         # 2. Fan Heat Logic
         charge = st.session_state.get(f"s_charge_{z_name}", 0.0)
-        rho = float(full_refrigerants_db[st.session_state.global_refrigerant].get("gas_density", 0))
+        rho = float(full_refrigerants_db[st.session_state.global_refrigerant].get("density", 0))
         if rho > 0 and charge > 0:
             ventilation = en378_ventilation(charge, rho)[0]
         else:
@@ -364,12 +363,15 @@ def execute_safety_assessment(chamber_mode, full_refrigerants_db):
                 upbel=st.session_state[f"s_upbel_{z_name}"], 
                 pers_dens=not st.session_state[f"s_pers_{z_name}"] 
             )
+                        
+            rho = selected_ref_data.get("density")
             
-            rho = selected_ref_data.get("gas_density")
-            if rho and float(rho) > 0:
-                q_calc = 15.0 * 1.0 * (charge / float(rho))
-                results["required_ventilation_m3h"] = max(q_calc, 2.0)
+            if rho is not None and float(rho) > 0:
+                q_min, v_dot_emerg = en378_ventilation(charge, float(rho))
+                results["required_ventilation_m3h"] = q_min
+                results["emergency_ventilation_m3s"] = v_dot_emerg
             else:
                 results["required_ventilation_m3h"] = None
+                results["emergency_ventilation_m3s"] = None
 
             st.session_state.zones[z_name]["safety_results"] = results

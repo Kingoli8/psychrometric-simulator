@@ -69,8 +69,12 @@ def simulate_wall_transient(R, C, area, dt, T_ext_array, T_int_target):
     time_steps = len(T_ext_array)
     nb_nodes = len(C)
     
-    # Initial guess: assume the wall starts at the target internal temperature
-    T_nodes = np.ones(nb_nodes)*T_int_target 
+    T_ext_initial = T_ext_array[0]
+    R_total = np.sum(R)
+    q_steady = (T_ext_initial - T_int_target)/R_total
+
+    R_cumulative = np.cumsum(R[:-1])
+    T_nodes = T_ext_initial - (q_steady * R_cumulative)
     
     # Arrays to store outputs
     Q_wall_total = np.zeros(time_steps)

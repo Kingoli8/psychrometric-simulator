@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # ⚙️ PDF EXPORT SETTINGS
 # ==========================================
 # Toggle this to True to automatically save all generated graphs as PDFs
-SAVE_PLOTS_AS_PDF = False  
+SAVE_PLOTS_AS_PDF = True  
 
 def save_plot_to_pdf(fig, filename):
     """Helper function to save Matplotlib figures to a local 'Pdf' directory."""
@@ -120,7 +120,7 @@ def display_heat_transfer_results(total_Q_hvac, dt, time_array_hours, zone_title
         
         ax_res.set_ylabel("Absolute HVAC Power (kW)", fontweight='bold')
         ax_res.set_xlabel("Time (hours)", fontweight='bold')
-        ax_res.set_ylim(bottom=0) 
+        ax_res.set_ylim(bottom=0, top=max(heating_max_kw, cooling_max_kw)*1.5) 
         ax_res.grid(True, linestyle='--', alpha=0.7)
         ax_res.legend(loc="upper right")
         
@@ -249,7 +249,8 @@ def display_safety_results(results):
     else:
         st.error(f"❌ **VIOLATION:** Testbench charge ({results['user_charge']} kg) exceeds the allowable limit!")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns([0.15, 0.25, 0.2, 0.2, 0.2])
+    
     col1.metric("Safety Class", results["safety_class"])
     
     if results["max_allowable_charge"] == float('inf'):
@@ -262,9 +263,23 @@ def display_safety_results(results):
         col3.metric("User Charge", f"{results['user_charge']:.2f} kg", delta=f"{delta_val:.2f} kg margin")
         
     ventilation = results.get("required_ventilation_m3h")
+    emerg_vent = results.get("emergency_ventilation_m3s")
+    
+    # --- Column 4: Minimum Ventilation ---
     if ventilation is not None:
-        col4.metric("Min. Ventilation", f"{ventilation:.2f} m³/h")
-        if ventilation > 0:
-            st.info(f"💨 **Operational Requirement:** Continuous ventilation or triggered by a gas sensor before 25% of LFL (see EN 378 wiki).")
+        col4.metric("Min. Ventilation", f"{ventilation:.1f} m³/h")
     else:
         col4.metric("Min. Ventilation", "N/A")
+        
+    # --- Column 5: Emergency Exhaust ---
+    if emerg_vent is not None and emerg_vent > 0:
+        emerg_vent_m3h = emerg_vent * 3600
+        col5.metric("Emergency Exhaust", f"{emerg_vent_m3h:.1f} m³/h", help=f"EN 378-3 Raw Output: {emerg_vent:.4f} m³/s")
+    else:
+        col5.metric("Emergency Exhaust", "N/A")
+
+    # --- Contextual Banners ---
+    if ventilation is not None and emerg_vent is not None:
+        st.info("💨 **Ventilation Requirements (EN 378-2 & 3):** Continuous minimum ventilation is required during normal operation. Emergency mechanical exhaust must be triggered by a leak detector.")
+    elif ventilation is None and emerg_vent is None:
+        st.warning("⚠️ **Missing Data:** Ventilation could not be calculated. Please ensure the 'density' is defined for this specific refrigerant in your database.")
