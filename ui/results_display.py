@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # ⚙️ PDF EXPORT SETTINGS
 # ==========================================
 # Toggle this to True to automatically save all generated graphs as PDFs
-SAVE_PLOTS_AS_PDF = True  
+SAVE_PLOTS_AS_PDF = False  
 
 def save_plot_to_pdf(fig, filename):
     """Helper function to save Matplotlib figures to a local 'Pdf' directory."""
