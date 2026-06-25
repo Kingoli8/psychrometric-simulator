@@ -10,6 +10,13 @@ from ui.sidebar import render_sidebar
 from ui.results_display import display_all_results  
 import ui.expanders as exp
 
+# --- STATE HELPER FUNCTION ---
+def init_state(key, default_val, cast_to_float=False):
+    """Elegantly initializes session state and prevents YAML float-crashes."""
+    if key not in st.session_state:
+        st.session_state[key] = default_val
+    elif cast_to_float:
+        st.session_state[key] = float(st.session_state[key])
 
 # ==========================================
 # PAGE CONFIGURATION & INITIALIZATION
@@ -47,7 +54,7 @@ default_wall_df = pd.DataFrame({
 
 # --- 3. Initialize Session State for Zones & Results ---
 def create_surface():
-    return {"id": str(uuid.uuid4())[:8], "df": default_wall_df.copy()} # Creates a unique ID for each surface
+    return {"id": str(uuid.uuid4())[:8], "df": default_wall_df.copy()}
 
 if "zones" not in st.session_state:
     st.session_state.zones = {
@@ -67,13 +74,14 @@ render_sidebar()
 
 st.title("Psychrometric Chamber Simulator")
 
+init_state("chamber_mode", "Twin-Chamber")
 chamber_mode = st.segmented_control(
     "Chamber Configuration", 
     options=["Mono-Chamber", "Twin-Chamber"],
-    default="Twin-Chamber", 
     selection_mode="single", 
     required=True,
-    label_visibility="collapsed"    
+    label_visibility="collapsed",
+    key="chamber_mode"
 )
 
 # --- Expander 1: Wall Configuration ---
@@ -96,10 +104,15 @@ with st.expander("**Simulation Parameters**", expanded=False):
     st.subheader("Chamber Setpoints")
     if chamber_mode == "Mono-Chamber":
         z1 = "Zone 1 (Indoor)"
+        
+        init_state(f"t_target_{z1}", -20.0, cast_to_float=True)
+        init_state(f"q_app_{z1}", 0.0, cast_to_float=True)
+        init_state(f"fan_sfp_{z1}", 1.5, cast_to_float=True)
+
         mcol1, mcol2, mcol3 = st.columns(3, border=True)
-        mcol1.number_input("Target Temp (°C)", value=-20.0, step=1.0, key=f"t_target_{z1}")
-        mcol2.number_input("Appliances Heat (W)", value=0.0, step=100.0, key=f"q_app_{z1}")
-        mcol3.number_input("Fan SFP [W/(m³/h)]", value=1.5, step=0.1, key=f"fan_sfp_{z1}")
+        mcol1.number_input("Target Temp (°C)", step=1.0, key=f"t_target_{z1}")
+        mcol2.number_input("Appliances Heat (W)", step=100.0, key=f"q_app_{z1}")
+        mcol3.number_input("Fan SFP [W/(m³/h)]", step=0.1, key=f"fan_sfp_{z1}")
         
         st.markdown("**Testbench Power**")
         exp.render_testbench_profile(z1, time_array_hours, time_steps, "Mono-Chamber")
@@ -107,19 +120,28 @@ with st.expander("**Simulation Parameters**", expanded=False):
     elif chamber_mode == "Twin-Chamber":
         z1 = "Zone 1 (Indoor)"
         z2 = "Zone 2 (Outdoor)"
+        
+        init_state(f"t_target_{z1}", 20.0, cast_to_float=True)
+        init_state(f"q_app_{z1}", 200.0, cast_to_float=True)
+        init_state(f"fan_sfp_{z1}", 1.5, cast_to_float=True)
+        
+        init_state(f"t_target_{z2}", 0.0, cast_to_float=True)
+        init_state(f"q_app_{z2}", 200.0, cast_to_float=True)
+        init_state(f"fan_sfp_{z2}", 1.5, cast_to_float=True)
+
         tcol1, tcol2 = st.columns(2)
         with tcol1:
             st.markdown("**Zone 1 (Indoor) Setpoints**")
             ttcol1, ttcol2, ttcol_f1 = st.columns(3, border=True)
-            ttcol1.number_input("Target Temp (°C)", value=20.0, step=1.0, key=f"t_target_{z1}")
-            ttcol2.number_input("Appliances (W)", value=200.0, step=100.0, key=f"q_app_{z1}")
-            ttcol_f1.number_input("Fan SFP", value=1.5, step=0.1, key=f"fan_sfp_{z1}")
+            ttcol1.number_input("Target Temp (°C)", step=1.0, key=f"t_target_{z1}")
+            ttcol2.number_input("Appliances (W)", step=100.0, key=f"q_app_{z1}")
+            ttcol_f1.number_input("Fan SFP", step=0.1, key=f"fan_sfp_{z1}")
         with tcol2:
             st.markdown("**Zone 2 (Outdoor) Setpoints**")
             ttcol3, ttcol4, ttcol_f2 = st.columns(3, border=True)
-            ttcol3.number_input("Target Temp (°C)", value=0.0, step=1.0, key=f"t_target_{z2}")
-            ttcol4.number_input("Appliances (W)", value=200.0, step=100.0, key=f"q_app_{z2}")
-            ttcol_f2.number_input("Fan SFP", value=1.5, step=0.1, key=f"fan_sfp_{z2}")
+            ttcol3.number_input("Target Temp (°C)", step=1.0, key=f"t_target_{z2}")
+            ttcol4.number_input("Appliances (W)", step=100.0, key=f"q_app_{z2}")
+            ttcol_f2.number_input("Fan SFP", step=0.1, key=f"fan_sfp_{z2}")
         
         tbcol1, tbcol2 = st.columns(2, border=True)
         with tbcol1:
@@ -140,7 +162,7 @@ with st.expander("**Safety Parameters (EN-378)**", expanded=False):
         format_func=format_refrigerant, help="The fluid used inside the test bench."
     )
 
-    pop_col1, pop_col2, pop_col3 = st.columns([0.25, 0.27, 0.5])
+    pop_col1, pop_col2, pop_col3 = st.columns([0.21, 0.23, 0.56])
     with pop_col1:
         with st.popover("➕ Add Custom Refrigerant", width="content"):
             c_ref_id = st.text_input("Refrigerant ID (e.g., R-290)")
@@ -160,21 +182,15 @@ with st.expander("**Safety Parameters (EN-378)**", expanded=False):
                     "chemical_name": c_ref_name if c_ref_name else "Custom", "safety_class": c_class, 
                     "fluid_group": c_group, "lfl": c_lfl, "atel_odl": c_atel,
                     "practical_limit": c_practical_limit, "auto_ignition_temp": c_auto_ignition_temp,
-                    "gas_density": c_density 
+                    "density": c_density 
                 }
                 st.rerun()
 
     with pop_col2:
         with st.popover("🔍 Refrigerant Characteristics", width="content"):
             ref_data = full_refrigerants_db[st.session_state.global_refrigerant]
-            
-            # 1. Create the dataframe and rename the column
             df_ref = pd.DataFrame(ref_data, index=[0]).T.rename(columns={0: "Value"})
-            
-            # 2. Force the entire "Value" column to be strings so PyArrow doesn't crash
             df_ref["Value"] = df_ref["Value"].astype(str)
-            
-            # 3. Display it safely
             st.dataframe(df_ref, width="content")
 
     with pop_col3:
@@ -188,7 +204,6 @@ with st.expander("**Safety Parameters (EN-378)**", expanded=False):
         s_tab1, s_tab2 = st.tabs(["Zone 1 Assessment", "Zone 2 Assessment"])
         with s_tab1: exp.render_safety_assessment("Zone 1 (Indoor)")
         with s_tab2: exp.render_safety_assessment("Zone 2 (Outdoor)")
-
 
 # ==========================================
 # SIMULATION EXECUTION & SaFETY ASSESSMENT

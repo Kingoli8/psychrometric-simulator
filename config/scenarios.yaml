@@ -1,0 +1,93 @@
+Special_test_case:
+  zones:
+    Zone 1 (Indoor):
+      walls:
+      - id: 05dbced1
+        df:
+        - Material: Brick
+          Thickness (m): '0.1'
+          k: '1.1'
+          rho: '1800'
+          cp: '840'
+        - Material: Air
+          Thickness (m): 1e-5
+          k: '0.176'
+          rho: '1.2'
+          cp: '1000'
+        - Material: Concrete
+          Thickness (m): '0.12'
+          k: '0.9'
+          rho: '1200'
+          cp: '1000'
+        - Material: Insulation
+          Thickness (m): '0.12'
+          k: '0.026'
+          rho: '35'
+          cp: '830'
+        - Material: Wood
+          Thickness (m): '0.1'
+          k: '0.14'
+          rho: '500'
+          cp: '2500'
+        - Material: Plaster
+          Thickness (m): 1e-2
+          k: '0.52'
+          rho: '1300'
+          cp: '840'
+    Zone 2 (Outdoor):
+      walls:
+      - id: 0a0d7a2e
+        df:
+        - Material: PIR
+          Thickness (m): '0.15'
+          k: '0.018'
+          rho: '92.67'
+          cp: '1400'
+    Shared Boundary:
+      walls:
+      - id: b0822fce
+        df:
+        - Material: PIR
+          Thickness (m): '0.15'
+          k: '0.018'
+          rho: '92.67'
+          cp: '1400'
+  custom_materials:
+    Glass:
+      k: '0.5'
+      rho: '150'
+      cp: '800'
+      color: '#2ECC71'
+  custom_refrigerants:
+    R604:
+      chemical_name: TestR
+      safety_class: B2
+      fluid_group: 1
+      lfl: 0.02
+      atel_odl: 0.002
+      practical_limit: 0.0022
+      auto_ignition_temp: 200.0
+      gas_density: 2.0
+  global_refrigerant: R604
+  widgets:
+    s_loc_Zone 1 (Indoor): Class IV
+    s_acc_Zone 1 (Indoor): Category b
+    mean_temp_summary: 15.0
+    q_app_Zone 1 (Indoor): 200.0
+    s_upbel_Zone 1 (Indoor): true
+    s_vunit_Zone 1 (Indoor): "m\xB3"
+    q_on_Zone 1 (Indoor): -200.0
+    t_ext_mode_summary: Sine Wave
+    bound_Zone 1 (Indoor)_05dbced1: Open air
+    q_tb_mode_Zone 1 (Indoor): Step Cycle (On/Off)
+    t_target_Zone 1 (Indoor): 20.0
+    bound_Shared Boundary_b0822fce: "Shared (Zone 1 \u2194 Zone 2)"
+    q_cyc_Zone 1 (Indoor): 5.0
+    s_pers_Zone 1 (Indoor): false
+    s_vol_Zone 1 (Indoor): 40.0
+    area_Zone 1 (Indoor)_05dbced1: 64.0
+    fan_sfp_Zone 1 (Indoor): 1.5
+    amp_temp_summary: 10.0
+    q_off_Zone 1 (Indoor): 0.0
+    chamber_mode: Mono-Chamber
+    s_charge_Zone 1 (Indoor): 1.5

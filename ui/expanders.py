@@ -7,9 +7,16 @@ import uuid
 from ui.wall_schematics import draw_wall_layers
 from core.Wall import init_RC_network, simulate_wall_transient
 from core.safety import en378_ventilation, safety_warnings, check_en378_limits
-from ui.results_display import display_safety_results, display_heat_transfer_results
 
 unit_to_seconds = {"Days": 86400, "Hours": 3600, "Minutes": 60, "Seconds": 1}
+
+# --- STATE HELPER FUNCTION ---
+def init_state(key, default_val, cast_to_float=False):
+    """Elegantly initializes session state and prevents YAML float-crashes."""
+    if key not in st.session_state:
+        st.session_state[key] = default_val
+    elif cast_to_float:
+        st.session_state[key] = float(st.session_state[key])
 
 # ==========================================
 # EXPANDER RENDERING FUNCTIONS
@@ -20,7 +27,7 @@ def render_walls_for_zone(full_materials_db, zone_name, default_wall_df):
     zone_data = st.session_state.zones[zone_name]
     
     for i, surface in enumerate(zone_data["walls"]):
-        uid = surface["id"]     # Unique ID of the surface
+        uid = surface["id"]
         wall_df = surface["df"] 
 
         header_col, button_col = st.columns([0.8, 0.2], vertical_alignment="bottom")
@@ -34,13 +41,16 @@ def render_walls_for_zone(full_materials_db, zone_name, default_wall_df):
 
         scol1, scol2 = st.columns(2, vertical_alignment="bottom")
         with scol1:
-            st.number_input("Wall Area (m²)", min_value=0.01, value=64.0, step=1.0, key=f"area_{zone_name}_{uid}")
+            default_area = 16.0 if zone_name == "Shared Boundary" else 64.0
+            init_state(f"area_{zone_name}_{uid}", default_area, cast_to_float=True)
+            st.number_input("Wall Area (m²)", min_value=0.01, step=1.0, key=f"area_{zone_name}_{uid}")
         with scol2:
             if zone_name == "Shared Boundary":
                 st.info("Boundary is strictly the adjacent zone (Zone 1 ↔ Zone 2)")
                 st.session_state[f"bound_{zone_name}_{uid}"] = "Shared (Zone 1 ↔ Zone 2)"
             else:
-                st.selectbox("External Boundary Condition", options=["Building interior", "Open air"], index=0, key=f"bound_{zone_name}_{uid}")
+                init_state(f"bound_{zone_name}_{uid}", "Building interior")
+                st.selectbox("External Boundary Condition", options=["Building interior", "Open air"], key=f"bound_{zone_name}_{uid}")
 
         edited_wall_df = st.data_editor(
             wall_df, key=f"editor_{zone_name}_{uid}", num_rows="dynamic",
@@ -90,7 +100,7 @@ def render_walls_for_zone(full_materials_db, zone_name, default_wall_df):
         st.caption(f"Overall heat transfer coefficient: AU = {AU_wall:.4f} W/(m².K)")
         st.write("")
 
-    btn_col, mat_add_col, mat_manage_col = st.columns([0.2, 0.22, 0.58])
+    btn_col, mat_add_col, mat_manage_col = st.columns([0.19, 0.2, 0.61])
     
     with btn_col:
         if st.button("➕ Add Another Surface", key=f"add_btn_{zone_name}", width="content"):
@@ -149,6 +159,8 @@ def render_global_settings():
 
     with cont1:
         ccol1, ccol2 = st.columns([0.3, 0.7])
+        
+        init_state("t_ext_mode_summary", "Constant")
         t_ext_mode = ccol1.selectbox("External Temperature", ["Constant", "Sine Wave", "File Upload"], key="t_ext_mode_summary")
 
         ccol3, ccol4 = st.columns([0.7, 0.3])
@@ -162,13 +174,19 @@ def render_global_settings():
         time_array_hours = (np.arange(time_steps)*dt)/3600
 
         if t_ext_mode == "Constant":
-            t_ext_val = ccol2.number_input("Constant Temp (°C)", value=20.0, step=0.5, key="t_ext_val_summary")
+            init_state("t_ext_val_summary", 20.0, cast_to_float=True)
+            t_ext_val = ccol2.number_input("Constant Temp (°C)", step=0.5, key="t_ext_val_summary")
             T_ext_array = np.ones(time_steps) * t_ext_val
+            
         elif t_ext_mode == "Sine Wave":
             sccol1, sccol2 = ccol2.columns([0.5, 0.5])
-            mean_temp = sccol1.number_input("Mean Temp (°C)", value=15.0, step=1.0, key="mean_temp_summary")
-            amplitude = sccol2.number_input("Amplitude (± °C)", value=10.0, step=1.0, key="amp_temp_summary")
+            init_state("mean_temp_summary", 15.0, cast_to_float=True)
+            init_state("amp_temp_summary", 10.0, cast_to_float=True)
+            
+            mean_temp = sccol1.number_input("Mean Temp (°C)", step=1.0, key="mean_temp_summary")
+            amplitude = sccol2.number_input("Amplitude (± °C)", step=1.0, key="amp_temp_summary")
             T_ext_array = mean_temp + amplitude * np.sin(2 * np.pi * time_array_hours / 24 - np.pi/2)
+            
         elif t_ext_mode == "File Upload":
             t_ext_file = ccol2.file_uploader("Upload Temp Profile", type=['csv', 'xlsx'], key="t_ext_file_summary", label_visibility="collapsed")
             if t_ext_file is not None:
@@ -199,17 +217,26 @@ def render_testbench_profile(zone_name, time_array_hours, time_steps, mode):
         plot_col = st.container()
 
     with input_col:
-        q_tb_mode = st.segmented_control("Testbench Profile Type", ["Constant", "Step Cycle (On/Off)", "File Upload"], default="Constant", key=f"q_tb_mode_{zone_name}")
+        init_state(f"q_tb_mode_{zone_name}", "Constant")
+        q_tb_mode = st.segmented_control("Testbench Profile Type", ["Constant", "Step Cycle (On/Off)", "File Upload"], key=f"q_tb_mode_{zone_name}")
         
         if q_tb_mode == "Constant":
-            q_tb_val = st.number_input("Constant Load (W)", value=10000.0, step=1000.0, key=f"q_c_{zone_name}")
+            default_power = -7000.0 if zone_name == "Zone 2 (Outdoor)" else 10000.0
+            init_state(f"q_c_{zone_name}", default_power, cast_to_float=True)
+            q_tb_val = st.number_input("Constant Load (W)", step=1000.0, key=f"q_c_{zone_name}")
             Q_tb_array = np.ones(time_steps)*q_tb_val
+            
         elif q_tb_mode == "Step Cycle (On/Off)":
             s_col1, s_col2, s_col3 = st.columns(3)
-            q_on = s_col1.number_input("ON Power (W)", value=-200.0, step=100.0, key=f"q_on_{zone_name}")
-            q_off = s_col2.number_input("OFF Power (W)", value=0.0, step=100.0, key=f"q_off_{zone_name}")
-            cycle_hours = s_col3.number_input("Cycle (hours)", value=5.0, step=0.5, key=f"q_cyc_{zone_name}")
+            init_state(f"q_on_{zone_name}", -200.0, cast_to_float=True)
+            init_state(f"q_off_{zone_name}", 0.0, cast_to_float=True)
+            init_state(f"q_cyc_{zone_name}", 5.0, cast_to_float=True)
+            
+            q_on = s_col1.number_input("ON Power (W)", step=100.0, key=f"q_on_{zone_name}")
+            q_off = s_col2.number_input("OFF Power (W)", step=100.0, key=f"q_off_{zone_name}")
+            cycle_hours = s_col3.number_input("Cycle (hours)", step=0.5, key=f"q_cyc_{zone_name}")
             Q_tb_array = np.where((time_array_hours % cycle_hours) < (cycle_hours / 2), q_on, q_off)
+            
         elif q_tb_mode == "File Upload":
             q_tb_file = st.file_uploader("Upload Power Profile (in W)", type=['csv', 'xlsx'], key=f"q_file_{zone_name}")
             if q_tb_file is not None:
@@ -233,24 +260,32 @@ def render_testbench_profile(zone_name, time_array_hours, time_steps, mode):
     
     st.session_state[f"q_tb_array_{zone_name}"] = Q_tb_array
 
-
 def render_safety_assessment(zone_name):
     """Renders the UI for EN-378 inputs for a specific zone."""
     col1, col2 = st.columns(2, border=True)
     with col1:
         vcol1, vcol2 = st.columns([0.7, 0.3], vertical_alignment="bottom")
-        vcol1.number_input("Chamber Volume", min_value=0.1, value=64.0, step=1.0, key=f"s_vol_{zone_name}")
-        vcol2.selectbox("Unit", ["m³", "L"], index=0, key=f"s_vunit_{zone_name}", label_visibility="collapsed")
-        st.number_input("Refrigerant Charge (kg)", min_value=0.0, value=2.0, step=0.1, key=f"s_charge_{zone_name}")
+        
+        init_state(f"s_vol_{zone_name}", 64.0, cast_to_float=True)
+        init_state(f"s_vunit_{zone_name}", "m³")
+        init_state(f"s_charge_{zone_name}", 2.0, cast_to_float=True)
+        
+        vcol1.number_input("Chamber Volume", min_value=0.1, step=1.0, key=f"s_vol_{zone_name}")
+        vcol2.selectbox("Unit", ["m³", "L"], key=f"s_vunit_{zone_name}", label_visibility="collapsed")
+        st.number_input("Refrigerant Charge (kg)", min_value=0.0, step=0.1, key=f"s_charge_{zone_name}")
         
     with col2:
-        st.selectbox("Location Class", ["Class I", "Class II", "Class III", "Class IV"], index=2, key=f"s_loc_{zone_name}")
-        st.selectbox("Access Category", ["Category a", "Category b", "Category c"], index=2, key=f"s_acc_{zone_name}")
+        init_state(f"s_loc_{zone_name}", "Class III")
+        init_state(f"s_acc_{zone_name}", "Category c")
+        st.selectbox("Location Class", ["Class I", "Class II", "Class III", "Class IV"], key=f"s_loc_{zone_name}")
+        st.selectbox("Access Category", ["Category a", "Category b", "Category c"], key=f"s_acc_{zone_name}")
         
     bcol1, bcol2 = st.columns(2)
-    bcol1.checkbox("Upper floors or below ground", value=False, key=f"s_upbel_{zone_name}", help="No emergency exits available.")
-    bcol2.checkbox("Personnel Density < 1 person/10m²", value=True, key=f"s_pers_{zone_name}")
-
+    init_state(f"s_upbel_{zone_name}", False)
+    init_state(f"s_pers_{zone_name}", True)
+    
+    bcol1.checkbox("Upper floors or below ground", key=f"s_upbel_{zone_name}", help="No emergency exits available.")
+    bcol2.checkbox("Personnel Density < 1 person/10m²", key=f"s_pers_{zone_name}")
 
 # ==========================================
 # EXECUTION SIMULATION FUNCTIONS
@@ -348,7 +383,6 @@ def execute_safety_assessment(chamber_mode, full_refrigerants_db):
         if not can_compute:
             st.session_state.zones[z_name]["safety_results"] = {"error": True, "message": "Critical data missing: " + ", ".join([f"{msg[1]}" for msg in warnings if msg[0] == "error"])}
         else:
-            # Reconstruct the logic pulling directly from the flat keys
             raw_vol = st.session_state[f"s_vol_{z_name}"]
             vol_unit = st.session_state[f"s_vunit_{z_name}"]
             actual_vol = raw_vol / 1000.0 if vol_unit == "L" else raw_vol
