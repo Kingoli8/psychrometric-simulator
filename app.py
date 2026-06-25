@@ -162,7 +162,7 @@ with st.expander("**Safety Parameters (EN-378)**", expanded=False):
         format_func=format_refrigerant, help="The fluid used inside the test bench."
     )
 
-    pop_col1, pop_col2, pop_col3 = st.columns([0.21, 0.23, 0.56])
+    pop_col1, pop_col2, pop_col3 = st.columns([0.22, 0.23, 0.55])
     with pop_col1:
         with st.popover("➕ Add Custom Refrigerant", width="content"):
             c_ref_id = st.text_input("Refrigerant ID (e.g., R-290)")
